@@ -4,6 +4,8 @@ Suckless File Bin is a temporary file host, similar to [0x0.st](https://0x0.st) 
 `nginx.conf` has been provided so you can do reverse proxy.  
 `index.html` can be used for just nginx or flask server.
 
+Notice for SFP, nginx is assumed to be used as index.txt will be created for each file sent(file path: OUTPUTDIR/ID/index.txt). And you are not required to use nginx for the HTTP server. With HTTP, no index.txt will be created, instead just a raw file as it will be handled by the flask server.
+
 # Usage
 ```sh
 sfb # SFP
