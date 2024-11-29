@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS, cross_origin
 import os
 import random
@@ -39,7 +39,7 @@ def upload():
 			file = request.files['file']
 			if file.filename == '':
 				return jsonify({"error": "No file selected"}), 400
-			filename = id + os.path.splitext(file.filename)[1]
+			filename = id
 			file.save(os.path.join(OUTPUT_DIR, filename))
 		else:
 			data = request.data.decode('utf-8')
@@ -50,10 +50,10 @@ def upload():
 				f.write(data)
 				f.write("\n")
 				f.close()
-		#		   IP					 Hostname
+		#		    IP					 Hostname
 		log_request(request.remote_addr, request.host, filename)
 
-		return f"{URL}/{filename}\n"
+		return f"{URL}/{id}\n"
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
@@ -61,6 +61,19 @@ def upload():
 @cross_origin()
 def index():
 	return send_from_directory('.', 'index.html')
+
+@app.route("/<id>", methods=["GET"])
+def get_file(id):
+    file_path = os.path.join(OUTPUT_DIR, id)
+
+    if not os.path.isfile(file_path):
+        return jsonify({"error": f"File '{id}' not found"}), 404
+
+    try:
+        # Send the file content
+        return send_file(file_path, as_attachment=False)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=PORT, debug=False)
