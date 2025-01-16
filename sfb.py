@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, render_template_string
 from flask_cors import CORS, cross_origin
 import os
 import random
 import string
 from datetime import datetime
+from pygments import highlight
+from pygments.lexers import guess_lexer
+from pygments.formatters import HtmlFormatter
 
 # Configuration
 OUTPUT_DIR = "code"
@@ -81,13 +84,11 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ id }}</title>
     <style>
         {{ style }}
     </style>
 </head>
 <body>
-    <h1>File: {{ id }}</h1>
     <pre>{{ content|safe }}</pre>
 </body>
 </html>
@@ -103,7 +104,7 @@ def get_file_raw(id):
     try:
         with open(file_path, 'r') as file:
             content = file.read()
-            lexer = guess_lexer_for_filename(file_path, content)
+            lexer = guess_lexer(content)
             formatter = HtmlFormatter()
             highlighted_content = highlight(content, lexer, formatter)
             style = formatter.get_style_defs()
