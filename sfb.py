@@ -20,47 +20,47 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def generate_id():
-	return ''.join(random.choices(SYMBOLS, k=ID_LEN))
+    return ''.join(random.choices(SYMBOLS, k=ID_LEN))
 
 def log_request(ip, hostname, unique_id):
-	"""Log the request details."""
-	timestamp = datetime.now().ctime()
-	with open(LOG_FILE, 'a') as log_file:
-		fmtstr = f"[{timestamp}] [{ip}] [{hostname}] [{unique_id}]"
-		print(fmtstr)
-		log_file.write(fmtstr + "\n")
+    """Log the request details."""
+    timestamp = datetime.now().ctime()
+    with open(LOG_FILE, 'a') as log_file:
+        fmtstr = f"[{timestamp}] [{ip}] [{hostname}] [{unique_id}]"
+        print(fmtstr)
+        log_file.write(fmtstr + "\n")
 
 @app.route('/', methods=['POST'])
 @cross_origin()
 def upload():
-	try:
-		id = generate_id()
-		if 'file' in request.files:
-			file = request.files['file']
-			if file.filename == '':
-				return jsonify({"error": "No file selected"}), 400
-			filename = id
-			file.save(os.path.join(OUTPUT_DIR, filename))
-		else:
-			data = request.data.decode('utf-8')
-			if not data:
-				return jsonify({"error": "No data provided"}), 400
-			filename = os.path.join(OUTPUT_DIR, id)
-			with open(filename, 'w') as f:
-				f.write(data)
-				f.write("\n")
-				f.close()
-		#		    IP					 Hostname
-		log_request(request.remote_addr, request.host, filename)
+    try:
+        id = generate_id()
+        if 'file' in request.files:
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"error": "No file selected"}), 400
+            filename = id
+            file.save(os.path.join(OUTPUT_DIR, filename))
+        else:
+            data = request.data.decode('utf-8')
+            if not data:
+                return jsonify({"error": "No data provided"}), 400
+            filename = os.path.join(OUTPUT_DIR, id)
+            with open(filename, 'w') as f:
+                f.write(data)
+                f.write("\n")
+                f.close()
+        #		    IP					 Hostname
+        log_request(request.remote_addr, request.host, filename)
 
-		return f"{URL}/{id}\n"
-	except Exception as e:
-		return jsonify({"error": str(e)}), 500
+        return f"{URL}/{id}\n"
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/', methods=['GET'])
 @cross_origin()
 def index():
-	return send_from_directory('.', 'index.html')
+    return send_from_directory('.', 'index.html')
 
 @app.route("/<id>", methods=["GET"])
 def get_file(id):
@@ -75,5 +75,46 @@ def get_file(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-	app.run(host="0.0.0.0", port=PORT, debug=False)
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ id }}</title>
+    <style>
+        {{ style }}
+    </style>
+</head>
+<body>
+    <h1>File: {{ id }}</h1>
+    <pre>{{ content|safe }}</pre>
+</body>
+</html>
+"""
+
+@app.route("/<id>/raw", methods=["GET"])
+def get_file_raw(id):
+    file_path = os.path.join(OUTPUT_DIR, id)
+
+    if not os.path.isfile(file_path):
+        return jsonify({"error": f"File '{id}' not found"}), 404
+
+    try:
+        with open(file_path, 'r') as file:
+            content = file.read()
+            lexer = guess_lexer_for_filename(file_path, content)
+            formatter = HtmlFormatter()
+            highlighted_content = highlight(content, lexer, formatter)
+            style = formatter.get_style_defs()
+
+            return render_template_string(
+                    HTML_TEMPLATE,
+                    id=id,
+                    content=highlighted_content,
+                    style=style,
+                    )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+app.run(host="0.0.0.0", port=PORT, debug=False)
