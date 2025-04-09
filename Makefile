@@ -1,5 +1,4 @@
 .POSIX:
-.SUFFIXES:
 
 VERSION = 1.0
 TARGET = sfb
@@ -7,20 +6,19 @@ TARGET2 = fbc
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 
-CFLAGS = -Os -march=native -mtune=native -pipe -s -std=c99 -pedantic -Wall -D_XOPEN_SOURCE=600
+CFLAGS += -pedantic -Wall -D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE
 
-SRC = $(TARGET).c
-SRC2 = $(TARGET2).c
+.c.o:
+	$(CC) -o $@ $(CFLAGS) -c $<
 
-$(TARGET): $(SRC) $(SRC2)
-	$(CC) $(SRC) -o $(TARGET) $(CFLAGS)
-	$(CC) $(SRC2) -o $(TARGET2) $(CFLAGS)
+$(TARGET): $(TARGET).o $(TARGET2).o
+	$(CC) $(SRC) -o $(TARGET) $(TARGET).o
+	$(CC) $(SRC2) -o $(TARGET2) $(TARGET2).o
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)
 	cp -R README.md $(TARGET) $(TARGET2) $(TARGET)-$(VERSION)
-	tar -cf $(TARGET)-$(VERSION).tar $(TARGET)-$(VERSION)
-	gzip $(TARGET)-$(VERSION).tar
+	tar -czf $(TARGET)-$(VERSION).tar $(TARGET)-$(VERSION)
 	rm -rf $(TARGET)-$(VERSION)
 
 install: $(TARGET) $(TARGET2)
@@ -30,12 +28,10 @@ install: $(TARGET) $(TARGET2)
 	chmod 755 $(DESTDIR)$(BINDIR)/$(TARGET2)
 
 uninstall:
-	rm $(DESTDIR)$(BINDIR)/$(TARGET)
-	rm $(DESTDIR)$(BINDIR)/$(TARGET2)
+	$(RM) $(DESTDIR)$(BINDIR)/$(TARGET)
 
 clean:
-	rm $(TARGET)
-	rm $(TARGET2)
+	$(RM) $(TARGET) $(TARGET2) *.o
 
 all: $(TARGET)
 
